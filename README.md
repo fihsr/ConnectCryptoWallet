@@ -133,10 +133,11 @@ async function connectSolflare() {
 }
 ```
 
-### Полный пример (HTML + JS)
+## Полный пример (HTML + JS)
 
 Ниже приведен полный код HTML-страницы с кнопками для подключения всех трех типов кошельков.
 
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -147,6 +148,7 @@ async function connectSolflare() {
         button { padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 16px; }
         .info { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px; }
     </style>
+    <!-- Подключаем Web3.js и Solana Web3.js с CDN -->
     <script src="https://cdn.jsdelivr.net/npm/web3@4.0.2/dist/web3.min.js"></script>
     <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
 </head>
@@ -167,10 +169,12 @@ async function connectSolflare() {
     </div>
 
     <script>
+        // Текущее состояние подключения
         let currentAccount = null;
         let currentProvider = null;
         let web3Instance = null; // Для EVM
 
+        // Функция обновления интерфейса
         function updateUI() {
             const infoDiv = document.getElementById('wallet-info');
             if (currentAccount) {
@@ -189,6 +193,7 @@ async function connectSolflare() {
             }
         }
 
+        // --- MetaMask (EVM) ---
         async function handleMetaMask() {
             if (typeof window.ethereum !== 'undefined') {
                 try {
@@ -198,6 +203,7 @@ async function connectSolflare() {
                     currentProvider = 'MetaMask';
                     updateUI();
 
+                    // Слушаем смену аккаунта
                     window.ethereum.on('accountsChanged', (accounts) => {
                         if (accounts.length > 0) {
                             currentAccount = accounts[0];
@@ -216,6 +222,7 @@ async function connectSolflare() {
             }
         }
 
+        // --- Phantom (Solana) ---
         async function handlePhantom() {
             if (window.solana && window.solana.isPhantom) {
                 try {
@@ -224,6 +231,7 @@ async function connectSolflare() {
                     currentProvider = 'Phantom';
                     updateUI();
 
+                    // Слушаем отключение/смену аккаунта
                     window.solana.on('disconnect', () => {
                         currentAccount = null;
                         currentProvider = null;
@@ -238,21 +246,28 @@ async function connectSolflare() {
             }
         }
 
+        // --- Solflare (Solana) ---
         async function handleSolflare() {
+            // Пытаемся найти провайдер Solflare
             const provider = window.solflare || (window.solana?.isSolflare ? window.solana : null);
             
             if (provider) {
                 try {
+                    // Если это объект solflare
                     if (window.solflare) {
                         await window.solflare.connect();
                         currentAccount = window.solflare.publicKey.toString();
                     } 
+                    // Если это провайдер через window.solana (Solflare как основной)
                     else if (window.solana && window.solana.isSolflare) {
                         const response = await window.solana.connect();
                         currentAccount = response.publicKey.toString();
                     }
                     currentProvider = 'Solflare';
                     updateUI();
+
+                    // Обработка отключения (зависит от реализации провайдера, упрощенно)
+                    // В реальном проекте нужно добавить слушатели событий для конкретного кошелька.
 
                 } catch (error) {
                     alert('Ошибка подключения Solflare: ' + error.message);
@@ -262,15 +277,19 @@ async function connectSolflare() {
             }
         }
 
+        // --- Отключение ---
         function handleDisconnect() {
             if (currentProvider === 'MetaMask') {
+                // Для MetaMask мы просто очищаем состояние, т.к. нельзя принудительно отключить через API
                 currentAccount = null;
                 currentProvider = null;
             } else if (currentProvider === 'Phantom' && window.solana) {
+                // Phantom имеет метод disconnect
                 window.solana.disconnect();
                 currentAccount = null;
                 currentProvider = null;
             } else if (currentProvider === 'Solflare') {
+                // Solflare: пробуем отключить
                 if (window.solflare) {
                     window.solflare.disconnect();
                 } else if (window.solana?.isSolflare) {
@@ -282,12 +301,15 @@ async function connectSolflare() {
             updateUI();
         }
 
+        // Назначаем обработчики на кнопки
         document.getElementById('connect-metamask').addEventListener('click', handleMetaMask);
         document.getElementById('connect-phantom').addEventListener('click', handlePhantom);
         document.getElementById('connect-solflare').addEventListener('click', handleSolflare);
         document.getElementById('disconnect').addEventListener('click', handleDisconnect);
 
+        // Инициализация UI
         updateUI();
     </script>
 </body>
 </html>
+```
